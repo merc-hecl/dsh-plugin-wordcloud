@@ -1,0 +1,3 @@
+- insert:
+    - id: wordcloud
+      name: dsh-plugin-wordcloud

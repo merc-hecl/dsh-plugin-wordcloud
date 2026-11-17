@@ -1,0 +1,48 @@
+{
+  "name": "dsh-plugin-wordcloud",
+  "version": "0.1.0",
+  "description": "Local word frequency statistics for DeepSeek Harness conversations.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/host.js",
+  "exports": {
+    ".": "./src/host.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/host.js",
+    "src/statistics.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.en.md"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
+    "test": "node --test"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "dependencies": {
+    "jieba-wasm": "2.4.0",
+    "mdast-util-from-markdown": "^2.0.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
