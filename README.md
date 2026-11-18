@@ -6,7 +6,17 @@
 
 ## 安装
 
-需要 Node.js 22.19 或更新版本。先在项目根目录构建安装包。
+需要 Node.js 22.19 或更新版本。正式版本发布后，可在桌面端的 **插件 → 安装** 搜索 `dsh-plugin-wordcloud`。Web 端需将 `pnpm` 加入 PATH，再运行以下命令。
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add dsh-plugin-wordcloud -w
+```
+
+在桌面端启用插件，按提示重启 DSH。Web 端安装后重启 DSH。
+
+离线安装可从 [GitHub Releases](https://github.com/merc-hecl/dsh-plugin-wordcloud/releases) 下载 `.tgz`。完整解压并保留其中的 `node_modules`，然后在 DSH 中用 `link:<解压后的 package 目录的绝对路径>` 安装。
+
+也可以在项目根目录从源码构建安装包。
 
 ```sh
 npm ci
@@ -21,6 +31,8 @@ npx @deepseek-ai/dsh plugin --profile web add "file:<安装包的绝对路径>" 
 ```
 
 本地开发可运行 `npm run build`，再用 `link:<源码目录的绝对路径>` 安装。
+
+维护者可参阅[发布流程](AGENTS.md#releases)。
 
 ## 统计口径
 

@@ -4,6 +4,14 @@
   "description": "Local word frequency statistics for DeepSeek Harness conversations.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/merc-hecl/dsh-plugin-wordcloud.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "main": "./src/host.js",
   "exports": {
     ".": "./src/host.js",
@@ -21,6 +29,12 @@
   "engines": {
     "node": ">=22.19.0"
   },
+  "bundleDependencies": [
+    "franc",
+    "jieba-wasm",
+    "mdast-util-from-markdown",
+    "stopword"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepack": "npm run build",
@@ -46,6 +60,7 @@
     "stopword": "3.1.5"
   },
   "devDependencies": {
+    "changelogen": "0.6.2",
     "esbuild": "^0.28.0"
   }
 }

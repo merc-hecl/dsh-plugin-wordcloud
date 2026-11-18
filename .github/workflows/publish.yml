@@ -1,0 +1,98 @@
+name: Publish plugin
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (e.g. v0.1.0)
+        required: true
+        type: string
+
+concurrency:
+  group: publish-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+
+      - run: npm ci
+
+      - name: Validate tag and generate release notes
+        run: node scripts/release-notes.mjs "$RELEASE_TAG" dist/release-notes.md
+
+      - run: npm test
+      - run: npm run build
+
+      - name: Check published npm version
+        id: npm
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import pkg from './package.json' with { type: 'json' };
+
+          const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(pkg.name)}/${pkg.version}`);
+          if (!response.ok && response.status !== 404) {
+            throw new Error(`npm registry returned HTTP ${response.status}`);
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `published=${response.ok}\n`);
+          appendFileSync(process.env.GITHUB_ENV,
+            `PACKAGE_SPEC=${pkg.name}@${pkg.version}\nPACKAGE_ARCHIVE=dist/${pkg.name}-${pkg.version}.tgz\n`);
+          NODE
+
+      - name: Pack plugin
+        if: steps.npm.outputs.published == 'false'
+        run: npm pack --ignore-scripts --pack-destination dist
+
+      - name: Reuse published npm archive
+        if: steps.npm.outputs.published == 'true'
+        run: npm pack "$PACKAGE_SPEC" --ignore-scripts --pack-destination dist
+
+      - name: Verify offline package
+        run: |
+          unpacked=$(mktemp -d)
+          tar -xzf "$PACKAGE_ARCHIVE" -C "$unpacked"
+          test -f "$unpacked/package/cordis.patch.yml"
+          node --check "$unpacked/package/lib/client.js"
+          node --input-type=module -e 'await import(process.argv[1])' "$unpacked/package/src/host.js"
+
+      - name: Publish to npm
+        if: steps.npm.outputs.published == 'false'
+        run: npm publish "$PACKAGE_ARCHIVE"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if release=$(gh release view "$RELEASE_TAG" --json assets,isDraft 2>/dev/null); then
+            asset=$(basename "$PACKAGE_ARCHIVE")
+            if ! jq -e --arg asset "$asset" '.assets | any(.name == $asset)' <<< "$release" >/dev/null; then
+              gh release upload "$RELEASE_TAG" "$PACKAGE_ARCHIVE"
+            fi
+            if jq -e '.isDraft' <<< "$release" >/dev/null; then
+              gh release edit "$RELEASE_TAG" --notes-file dist/release-notes.md --draft=false
+            fi
+          else
+            gh release create "$RELEASE_TAG" "$PACKAGE_ARCHIVE" \
+              --verify-tag --notes-file dist/release-notes.md --title "$RELEASE_TAG"
+          fi

@@ -6,7 +6,17 @@ Open **Word Cloud** in the DeepSeek Harness sidebar to see word frequencies in u
 
 ## Install
 
-Node.js 22.19 or later is required. Build the package from the project root.
+Node.js 22.19 or later is required. Once a release is available, use **Plugins → Install** on desktop and enter `dsh-plugin-wordcloud`. On web, put `pnpm` on PATH and run the following command.
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add dsh-plugin-wordcloud -w
+```
+
+Enable the plugin on desktop and restart DSH if prompted. On web, restart DSH after installing.
+
+For offline installation, download the `.tgz` from [GitHub Releases](https://github.com/merc-hecl/dsh-plugin-wordcloud/releases). Extract the entire archive, including `node_modules`, and install it in DSH with `link:<absolute path to the extracted package directory>`.
+
+You can also build the package from source at the project root.
 
 ```sh
 npm ci
@@ -21,6 +31,8 @@ npx @deepseek-ai/dsh plugin --profile web add "file:<absolute path to the packag
 ```
 
 For local development, run `npm run build` and install with `link:<absolute path to the source directory>`.
+
+Maintainers can follow the [release process](AGENTS.md#releases).
 
 ## How counts work
 
