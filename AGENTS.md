@@ -8,3 +8,7 @@ Examples:
 
 - `feat(wordcloud): add hover feedback`
 - `fix: prevent word labels from clipping`
+
+## UI Acceptance
+
+The user is responsible for acceptance testing of all UI changes.
