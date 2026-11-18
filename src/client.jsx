@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
-  Button, Menu, IconClockOutlineRegular, IconLoadingOutlineRegular, IconChevronDownOutlineRegular,
-  IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, IconRefreshOutlineRegular,
+  Button, Menu, Tooltip, IconClockOutlineRegular, IconLoadingOutlineRegular, IconChevronDownOutlineRegular,
+  IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, IconQuestionOutlineRegular, IconRefreshOutlineRegular,
 } from "@deepseek-ai/dsh-client-ui-primitives";
 import css from "./client.css";
 
@@ -11,6 +11,9 @@ const zh = {
   title: "词云", run: "立即统计", running: "统计中…", progress: "统计中 {visited}/{total}",
   schedule: "周期统计", off: "关闭", everyHour: "每小时", everyDay: "每 24 小时", everyWeek: "每 7 天",
   ranking: "词频排行", turnRanking: "轮次排行",
+  rankingHelp: "按包含该词的用户消息数排序。同一条消息中的同一个词只计一次。",
+  turnRankingHelp: "按所选词在各轮次的命中消息数排序。占比只在有轮次记录的命中消息中计算。",
+  explainRanking: "了解{title}",
   sessions: "会话", messages: "用户消息", updated: "最近统计", next: "下次统计",
   matches: "命中消息", round: "第 {n} 轮",
   unknown: "未进入轮次", none: "尚无统计", noTerms: "没有可统计的词语",
@@ -23,6 +26,9 @@ const en = {
   title: "Word Cloud", run: "Analyze now", running: "Analyzing…", progress: "Analyzing {visited}/{total}",
   schedule: "Schedule", off: "Off", everyHour: "Hourly", everyDay: "Every 24 hours", everyWeek: "Every 7 days",
   ranking: "Word frequency", turnRanking: "Turn ranking",
+  rankingHelp: "Words are ranked by how many user messages contain them. Each word counts once per message.",
+  turnRankingHelp: "Turns are ranked by matching messages for the selected word. Shares count only matching messages with a recorded turn.",
+  explainRanking: "About {title}",
   sessions: "Sessions", messages: "User messages", updated: "Last analyzed", next: "Next run",
   matches: "Matching messages", round: "Turn {n}",
   unknown: "No turn yet", none: "No analysis yet", noTerms: "No words found",
@@ -125,7 +131,23 @@ function Cloud({ terms, selected, select, label, format }) {
   </div>;
 }
 
-function PagedRanking({ titleId, title, summary, className, items, listClassName, renderRow, empty, note, format, t }) {
+function RankingHelp({ label, description }) {
+  const [dismissed, setDismissed] = useState(false);
+  // Reset the tooltip's click pin on pointer exit and rearm it for the next visit.
+  useEffect(() => {
+    if (dismissed) setDismissed(false);
+  }, [dismissed]);
+
+  return <Tooltip label={description} side="bottom" maxWidth={280} portal openOnClick disabled={dismissed}>
+    <Button variant="ghost" size="sm" className="wc-ranking-help" aria-label={label}
+      icon={<IconQuestionOutlineRegular size={14} />}
+      onPointerLeave={(event) => {
+        if (event.pointerType !== "touch") setDismissed(true);
+      }} />
+  </Tooltip>;
+}
+
+function PagedRanking({ titleId, title, description, summary, className, items, listClassName, renderRow, empty, note, format, t }) {
   const listSpace = useRef(null);
   const [pageSize, setPageSize] = useState(1);
   const [page, setPage] = useState(0);
@@ -146,7 +168,13 @@ function PagedRanking({ titleId, title, summary, className, items, listClassName
   const active = Math.min(page, pageCount - 1);
   const start = active * pageSize;
   return <section className={`wc-box wc-ranking ${className}`} aria-labelledby={titleId}>
-    <div className="wc-section"><h2 id={titleId}>{title}</h2>{summary}</div>
+    <div className="wc-section">
+      <div className="wc-section-title">
+        <h2 id={titleId}>{title}</h2>
+        <RankingHelp label={t("explainRanking", { title })} description={description} />
+      </div>
+      {summary}
+    </div>
     <div className="wc-list-space" ref={listSpace}>
       {items.length ? <ol className={listClassName} start={start + 1} aria-labelledby={titleId}>
         {items.slice(start, start + pageSize).map((item, i) => renderRow(item, start + i))}
@@ -167,6 +195,7 @@ function PagedRanking({ titleId, title, summary, className, items, listClassName
 
 function Rankings({ terms, selected, select, format, t }) {
   return <PagedRanking titleId="wc-frequency-title" className="wc-rank" title={t("ranking")}
+    description={t("rankingHelp")}
     summary={<span>{t("matches")}</span>} items={terms} listClassName="wc-list" format={format} t={t}
     renderRow={({ text, count }, index) => <li key={text}>
         <Button className="wc-row" size="sm" title={text} aria-pressed={selected === text}
@@ -183,6 +212,7 @@ function TurnRanking({ term, format, percent, t }) {
   const total = term.turns.reduce((sum, [, count]) => sum + count, 0);
   const rows = term.turns.toSorted(([turnA, countA], [turnB, countB]) => countB - countA || turnA - turnB);
   return <PagedRanking titleId="wc-turn-title" className="wc-detail" title={t("turnRanking")}
+    description={t("turnRankingHelp")}
     summary={<span className="wc-selected-term" title={`${term.text} · ${t("matches")} ${format.format(term.count)}`}>
       <b>{term.text}</b> · {format.format(term.count)}
     </span>}
