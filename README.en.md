@@ -25,6 +25,8 @@ For local development, run `npm run build` and install with `link:<absolute path
 ## How counts work
 
 - The plugin reads user message text from conversations available to DSH. Agent replies, automatically injected content, block quotes, and attachments are excluded. Content pasted as plain text is counted.
+- Script and context determine which stop-word list filters common conjunctions, particles, and conversational filler. Chinese also uses part-of-speech tags. Filtering is conservative when the language is uncertain.
+- The multilingual stop-word lists come from [`stopword`](https://github.com/fergiemcdowall/stopword).
 - Each word counts at most once per message. Turn shares use matching messages with a recorded turn and display two decimal places.
 - Analysis runs locally. Results and schedule settings are stored in `$DSH_HOME/storages/wordcloud.json`. The default data directory is `~/.dsh`.
 

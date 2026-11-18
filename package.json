@@ -13,6 +13,7 @@
   "files": [
     "src/host.js",
     "src/statistics.js",
+    "src/tokenize.js",
     "lib/client.js",
     "cordis.patch.yml",
     "README.en.md"
@@ -39,8 +40,10 @@
     }
   },
   "dependencies": {
+    "franc": "6.2.0",
     "jieba-wasm": "2.4.0",
-    "mdast-util-from-markdown": "^2.0.2"
+    "mdast-util-from-markdown": "^2.0.2",
+    "stopword": "3.1.5"
   },
   "devDependencies": {
     "esbuild": "^0.28.0"

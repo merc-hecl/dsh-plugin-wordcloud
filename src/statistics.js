@@ -1,34 +1,9 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { cut } from "jieba-wasm";
 import { setImmediate } from "node:timers/promises";
+import { tokenize } from "./tokenize.js";
 
-const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
-const japaneseSegmenter = new Intl.Segmenter("ja", { granularity: "word" });
-const stop = new Set((
-  "的 了 和 与 及 在 是 我 你 他 她 它 们 之 为 把 给 让 都 也 就 又 而 或 地 得 被 到 从 对 有 会 能 想 可 这 那 " +
-  "一个 一下 这个 那个 这些 那些 一些 我们 你们 他们 自己 什么 怎么 如何 以及 如果 因为 所以 这样 可以 " +
-  "a an the i you he she it we they me my your his her its our their to of in on for at from by with " +
-  "and or but as is are was were be been do does did can could would should will have has had this that these those"
-).split(" "));
 const limit = 60;
-const hanOnly = /^\p{Script=Han}+$/u;
-const kana = /[\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]/u;
-const useful = (word) => /\p{L}/u.test(word) && word.length <= 40 && !stop.has(word);
-
-function* tokenize(text) {
-  // Route a contiguous Han/kana run together so Japanese kanji stay with their context.
-  const scriptRuns = /[\p{Script=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]+|[^\p{Script=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}]+/gu;
-  for (const [span] of text.matchAll(scriptRuns)) {
-    if (hanOnly.test(span)) {
-      yield* cut(span, true);
-    } else {
-      const engine = kana.test(span) ? japaneseSegmenter : segmenter;
-      for (const part of engine.segment(span)) {
-        if (part.isWordLike) yield part.segment;
-      }
-    }
-  }
-}
+const useful = (word) => /\p{L}/u.test(word) && word.length <= 40;
 
 // An explicit quote carries no author information in Markdown. Exclude the
 // whole block, including lazy continuation lines, rather than guessing who wrote it.

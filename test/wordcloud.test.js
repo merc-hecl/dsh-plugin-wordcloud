@@ -53,12 +53,46 @@ test("counts distinct authored messages with their actual rounds and ignores inh
 });
 
 test("segments Japanese, Thai, and mixed Chinese and English words", async () => {
-  const text = "変更内容を確認する。ภาษาไทยไม่มีช่องว่าง。检查 API 文档。";
+  const text = "変更 内容 を 確認してください。ภาษาไทยไม่มีช่องว่าง และตรวจสอบไฟล์。现在已经重启，但是没有回应吧。继续检查异步构建和 API 文档 and then verify the renderer。";
   const events = [...turn(1, user("one", text)), ...turn(2, user("two", text))];
   const result = await collect(corpus({ one: log(events) }), new AbortController().signal, () => {});
-  const words = new Set(result.words.map((row) => row.text));
-  for (const word of ["変更", "確認", "ภาษา", "ช่อง", "检查", "api", "文档"]) assert.ok(words.has(word), word);
-  assert.ok(!words.has("変"));
+  const words = new Map(result.words.map((row) => [row.text, row.count]));
+  for (const word of ["変更", "確認", "ภาษา", "ช่อง", "重启", "回应", "异步", "构建", "api", "文档", "renderer"]) {
+    assert.equal(words.get(word), 2, word);
+  }
+  for (const word of ["変", "を", "くだ", "さい", "และ", "现在", "已经", "但是", "没有", "吧", "继续", "then", "the"]) {
+    assert.ok(!words.has(word), word);
+  }
+});
+
+test("filters conversation filler by language and keeps words with another meaning", async () => {
+  const samples = [
+    ["I think the renderer can still die in this test, so please check diagnostics.",
+      ["die", "renderer", "diagnostics"], ["the", "can", "still", "please"]],
+    ["Die Anwendung startet nach dem Update nicht mehr und dann stürzt der Renderer ab.",
+      ["anwendung", "update", "renderer"], ["die", "nach", "und", "dann"]],
+    ["J’ai mis le cache à jour parce qu’il y avait encore des erreurs.",
+      ["cache", "erreurs"], ["j’ai", "le", "parce", "qu’il", "encore"]],
+    ["Por favor revisa el registro porque aún tenemos errores en la aplicación.",
+      ["registro", "errores", "aplicación"], ["el", "porque", "en", "la"]],
+    ["Пожалуйста проверьте этот журнал потому что приложение снова аварийно завершилось.",
+      ["журнал", "приложение"], ["пожалуйста", "этот", "потому", "что"]],
+    ["من فضلك تحقق من السجل لأن التطبيق لا يعمل بشكل صحيح.",
+      ["السجل", "التطبيق"], ["من", "لأن", "لا"]],
+    ["कृपया इस लॉग को जांचें क्योंकि यह ऐप फिर बंद हो गया है।",
+      ["लॉग", "ऐप"], ["इस", "को", "यह", "है"]],
+    ["Αυτό το αρχείο δεν ανοίγει και η εφαρμογή σταματάει.",
+      ["αρχείο", "εφαρμογή"], ["αυτό", "το", "και", "η"]],
+    ["그리고 캐시도 확인합니다.", ["캐시도"], ["그리고"]],
+    ["die", ["die"], []],
+  ];
+  for (const [text, expected, filler] of samples) {
+    const events = turn(1, user("message", text));
+    const result = await collect(corpus({ one: log(events) }), new AbortController().signal, () => {});
+    const words = new Set(result.words.map((row) => row.text));
+    for (const word of expected) assert.ok(words.has(word), `missing ${word} in ${text}`);
+    for (const word of filler) assert.ok(!words.has(word), `unexpected ${word} in ${text}`);
+  }
 });
 
 test("a saved overdue schedule runs on startup, persists results, and can be switched off", async (t) => {

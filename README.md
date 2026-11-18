@@ -25,6 +25,8 @@ npx @deepseek-ai/dsh plugin --profile web add "file:<安装包的绝对路径>" 
 ## 统计口径
 
 - 只统计 DSH 可查询的用户正文。Agent 回复、自动注入、引用块和附件不计入统计。直接粘贴为普通正文的内容会计入统计。
+- 按文字系统和上下文选用停用词表，过滤常见连词、助词和口语填充词。中文额外使用词性标注。语言难以判断时采用保守过滤。
+- 多语言停用词表来自 [`stopword`](https://github.com/fergiemcdowall/stopword)。
 - 同一个词在一条消息中最多计一次。轮次占比以带轮次的命中消息为分母，显示到小数点后两位。
 - 统计在本机运行。结果和周期设置保存在 `$DSH_HOME/storages/wordcloud.json`，默认根目录为 `~/.dsh`。
 
