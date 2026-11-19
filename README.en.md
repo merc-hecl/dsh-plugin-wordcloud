@@ -4,6 +4,8 @@
 
 Open **Word Cloud** in the DeepSeek Harness sidebar to see word frequencies in user messages. Select a word to see which conversation turns it appears in most often and their shares. Run an analysis manually or schedule it hourly, every 24 hours, or every 7 days.
 
+After an analysis, select **Share** to preview the word cloud image. Select **Save image** to choose where to save the PNG in the system file dialog. In the web app, this requires a browser that supports a native save picker.
+
 ## Install
 
 Node.js 22.19 or later is required. Once a release is available, use **Plugins → Install** on desktop and enter `dsh-plugin-wordcloud`. On web, put `pnpm` on PATH and run the following command.

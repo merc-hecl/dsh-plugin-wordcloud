@@ -26,6 +26,22 @@
 .wc-header h1 { margin: 0; font-size: 26px; line-height: 1.25; font-weight: 600; }
 .wc-actions { flex-wrap: wrap; gap: 8px; }
 .wc-actions svg { width: 16px; height: 16px; }
+.wc-share-dialog[role="dialog"] {
+  width: min(680px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+}
+.wc-share-image {
+  display: block;
+  width: 100%;
+  max-height: 55dvh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.wc-share-loading, .wc-share-error { margin: 0; font-size: 13px; }
+.wc-share-loading { color: var(--dsw-alias-label-secondary); }
+.wc-share-error { color: var(--dsw-alias-label-error); }
+.wc-share-image + .wc-share-error { margin-top: 12px; }
 .wc-meta, .wc-section > span { color: var(--wc-secondary); font-size: 12px; }
 .wc-metadata { flex-wrap: wrap; column-gap: 20px; row-gap: 8px; margin-top: 16px; }
 .wc-metadata b { color: var(--dsw-alias-label-primary); font-weight: 500; margin-inline-start: 3px; }

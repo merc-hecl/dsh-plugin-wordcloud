@@ -1,8 +1,11 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
-  Button, Menu, Tooltip, IconClockOutlineRegular, IconLoadingOutlineRegular, IconChevronDownOutlineRegular,
+  Button, Menu, Toast, Tooltip, IconClockOutlineRegular, IconLoadingOutlineRegular, IconChevronDownOutlineRegular,
   IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, IconQuestionOutlineRegular, IconRefreshOutlineRegular,
+  IconShareOutlineRegular,
 } from "@deepseek-ai/dsh-client-ui-primitives";
+import { getCloudBands } from "./cloud.js";
+import { ShareDialog } from "./share-dialog.jsx";
 import css from "./client.css";
 
 const id = "wordcloud";
@@ -21,6 +24,8 @@ const zh = {
   noTurns: "暂无轮次记录", skipped: "未读取 {n} 个会话",
   scanError: "统计失败", storageError: "无法读取或保存本地统计", requestError: "无法连接词云插件",
   loading: "加载中…", retry: "重试",
+  share: "分享", close: "关闭", cancel: "取消", saveImage: "保存图片", imageSaved: "图片已保存",
+  imageError: "无法生成词云图片", saveError: "无法保存图片", saveUnavailable: "此环境无法选择保存位置",
 };
 const en = {
   title: "Word Cloud", run: "Analyze now", running: "Analyzing…", progress: "Analyzing {visited}/{total}",
@@ -36,6 +41,9 @@ const en = {
   noTurns: "No turn data", skipped: "{n} sessions unread",
   scanError: "Analysis failed", storageError: "Could not read or save local statistics", requestError: "Could not connect to Word Cloud",
   loading: "Loading…", retry: "Retry",
+  share: "Share", close: "Close", cancel: "Cancel", saveImage: "Save image", imageSaved: "Image saved",
+  imageError: "Could not generate the word cloud image", saveError: "Could not save the image",
+  saveUnavailable: "A save location picker is unavailable in this environment",
 };
 const periodLabels = ["off", "everyHour", "everyDay", "everyWeek"];
 const countFormat = (locale) => new Intl.NumberFormat(locale);
@@ -92,26 +100,17 @@ function playCloudBurst(layer, word) {
   });
 }
 
-function Cloud({ terms, selected, select, label, format }) {
+function Cloud({ bands, selected, select, label, format }) {
   const burstLayer = useRef(null);
-  const visible = terms.slice(0, 18);
-  const groups = [
-    { name: "upper", words: visible.slice(5, 11) },
-    { name: "center", words: [3, 1, 0, 2, 4].map((index) => visible[index]).filter(Boolean) },
-    { name: "lower", words: visible.slice(11) },
-  ];
-  const floor = Math.log1p(visible.at(-1).count);
-  const range = Math.log1p(visible[0].count) - floor;
   return <div className="wc-cloud" role="group" aria-label={label}>
-    {groups.filter(({ words }) => words.length).map(({ name, words }) => (
+    {bands.map(({ name, words }) => (
       <div className={`wc-cloud-band wc-cloud-${name}`} key={name}>
         {words.map((term) => {
-          const weight = range ? (Math.log1p(term.count) - floor) / range : 0.4;
           const count = format.format(term.count);
           return <Button key={term.text} size="sm" className="wc-word"
             aria-label={`${term.text} · ${count}`} aria-pressed={selected === term.text}
             title={term.text.length > 10 ? term.text : undefined}
-            style={{ "--wc-size": `${Math.round(16 + weight * 28)}px`, "--wc-weight": Math.round(500 + weight * 250) }}
+            style={{ "--wc-size": `${term.fontSize}px`, "--wc-weight": term.fontWeight }}
             onClick={(event) => {
               select(term.text);
               if (event.detail > 0 && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -225,11 +224,14 @@ function TurnRanking({ term, format, percent, t }) {
       </li>} />;
 }
 
-function Panel({ t, getLanguage }) {
+function Panel({ t, getLanguage, getFileActions }) {
   const [state, setState] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [shareBands, setShareBands] = useState(null);
+  const [saveToast, setSaveToast] = useState(null);
+  const saveToastSequence = useRef(0);
   const client = useRef(null);
   const busy = useRef(false);
   const locale = getLanguage();
@@ -272,6 +274,7 @@ function Panel({ t, getLanguage }) {
 
   const result = state?.result;
   const terms = result?.words ?? [];
+  const bands = getCloudBands(terms);
   const term = terms.find((entry) => entry.text === selected) ?? terms[0];
   const progress = state?.progress;
   const problem = error ?? (!progress && ({ scan: "scanError", storage: "storageError" })[state?.problem]);
@@ -281,6 +284,8 @@ function Panel({ t, getLanguage }) {
       <header className="wc-header">
         <h1>{t("title")}</h1>
         {state && <div className="wc-actions">
+          <Button variant="outline" icon={<IconShareOutlineRegular />} aria-haspopup="dialog"
+            disabled={!bands.length} onClick={() => setShareBands(bands)}>{t("share")}</Button>
           <PeriodMenu interval={state.interval} busy={pending} change={(interval) => request("PATCH", { interval })} t={t} />
           <Button variant="primary" icon={progress ? <IconLoadingOutlineRegular /> : <IconRefreshOutlineRegular />}
             disabled={pending || !!progress} onClick={() => request("POST")}>
@@ -300,7 +305,7 @@ function Panel({ t, getLanguage }) {
       </div>}
       {result ? (
         term ? <div className="wc-charts">
-          <Cloud terms={terms} selected={term.text} select={setSelected} label={t("title")} format={format} />
+          <Cloud bands={bands} selected={term.text} select={setSelected} label={t("title")} format={format} />
           <Rankings terms={terms} selected={term.text} select={setSelected} format={format} t={t} />
           <TurnRanking key={term.text} term={term} format={format} percent={percent} t={t} />
         </div> : <div className="wc-empty" role="status">{t("noTerms")}</div>
@@ -308,6 +313,10 @@ function Panel({ t, getLanguage }) {
         {t(!state ? "loading" : progress ? "running" : "none")}
       </div>}
     </div>
+    {shareBands && <ShareDialog bands={shareBands} getFileActions={getFileActions}
+      onClose={() => setShareBands(null)} onSaved={() => setSaveToast(++saveToastSequence.current)} t={t} />}
+    {saveToast !== null && <Toast key={saveToast} tone="success" text={t("imageSaved")}
+      onDone={() => setSaveToast((current) => current === saveToast ? null : current)} />}
   </main>;
 }
 
@@ -323,8 +332,9 @@ export function* apply(ctx) {
   }, "wordcloud: styles");
   const t = ctx.locale.bind(id);
   const getLanguage = () => document.documentElement.lang || "en";
+  const getFileActions = () => ctx.get("fileActions");
   yield ctx.slots.inject("main", () => ctx.slots.register({
-    name: "main", key: id, locale: id, inject: () => ({ getLanguage }),
+    name: "main", key: id, locale: id, inject: () => ({ getLanguage, getFileActions }),
   }, Panel));
   yield ctx.slots.inject("sidebar.panellist", () => ctx.slots.register({
     name: "sidebar.panellist", id, order: 20, locale: id, label: () => t("title"),
