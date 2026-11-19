@@ -78,7 +78,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.npm.outputs.published == 'false'
-        run: npm publish "$PACKAGE_ARCHIVE"
+        run: npm publish "./$PACKAGE_ARCHIVE"
 
       - name: Publish GitHub Release
         env:
