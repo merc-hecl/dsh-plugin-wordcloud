@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-wordcloud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local word frequency statistics for DeepSeek Harness conversations.",
   "license": "MIT",
   "type": "module",
